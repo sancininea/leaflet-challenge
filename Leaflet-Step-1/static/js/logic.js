@@ -22,66 +22,47 @@ let bg_layer = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/
 // Create a baseMaps object to hold the lightmap layer
 let baseMaps = {
     "Light Map": bg_layer
-}
+};
 
 // Crea el mapa con las opciones
 var mymap = createMap(initialCoords, mapZoomLevel, [bg_layer]);
 
-// Iconos de colores
-var greenIcon = L.AwesomeMarkers.icon({
-    icon: 'coffee',
-    markerColor: 'green'
-});
-var orangeIcon = L.AwesomeMarkers.icon({
-    icon: 'coffee',
-    markerColor: 'orange'
-});
-var redIcon = L.AwesomeMarkers.icon({
-    icon: 'coffee',
-    markerColor: 'red'
-});
-
-
-
-
 /// Selecciona color del marcador
 function chooseColor(mag) {
-    if (mag > 5) {
-        icon = redIcon;
-    } else if (mag > 4) {
-        icon = orangeIcon;
-    } else {
-        icon = greenIcon;
-    }
+    var markerHtmlStyles = `
+    background-color: ${getColor(mag)};
+    width: 2rem;
+    height: 2rem;
+    display: block;
+    left: -1.5rem;
+    top: -1.5rem;
+    position: relative;
+    border-radius: 2rem 2rem 0;
+    transform: rotate(45deg);
+    border: 1px solid #FFFFFF`
+
+    var icon = L.divIcon({
+        className: "my-custom-pin",
+        iconAnchor: [0, 24],
+        labelAnchor: [-6, 0],
+        popupAnchor: [0, -36],
+        html: `<span style="${markerHtmlStyles}" />`
+    })
 
     return icon;
-}
+};
 
 //// Color de fondo de la leyenda
 function getColor(d) {
-    if (d === 'More than 5') {
-        color = " red";
-    } else if (d === '4 to 5') {
-        color = " orange";
-    } else {
-        color = " green";
-    }
-    return color;
+    return d > 5 ? '#800026' :
+        d > 4 ? '#BD0026' :
+        d > 3 ? '#E31A1C' :
+        d > 2 ? '#FC4E2A' :
+        d > 1 ? '#FD8D3C' :
+        d > .5 ? '#FEB24C' :
+        d > .1 ? '#FED976' :
+        '#FFEDA0';
 };
-
-function style(feature) {
-    return {
-        weight: 1.5,
-        opacity: 1,
-        fillOpacity: 1,
-        radius: 6,
-        fillColor: getColor(feature.properties.TypeOfIssue),
-        color: "grey"
-
-    };
-};
-
-
 
 // Obtiene datos del json
 var url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
@@ -103,39 +84,22 @@ d3.json(url, jsonR => {
 
     mymap.addLayer(earthquakeLayer);
 
-
-    /////////////////////////////////////////////////////////////////
-
-
     // Set up the legend
-    var legend = L.control({ position: "bottomright" });
-    legend.onAdd = function() {
-        var div = L.DomUtil.create("div", "info legend");
-        var colors = ['red', 'red', 'red', 'orange', 'orange', 'orange', 'green', 'green']
-        var labels = [];
+    var legend = L.control({ position: 'bottomright' });
 
-        // Add min & max
-        var legendInfo = "<h1>Magnitude</h1>" +
-            "<div class=\"labels\">" +
-            "<div class=\"min\">" + 0 + "</div>" +
-            "<div class=\"max\">" + 8 + "</div>" +
-            "</div>";
-
-        div.innerHTML = legendInfo;
-
-        limits = [0, 1, 2, 3, 4, 5, 6, 7];
-
-        limits.forEach(index => {
-            labels.push("<li style=\"background-color: " + colors[index] + "\"></li>");
-        });
-
-        div.innerHTML += "<ul>" + labels.join("") + "</ul>";
+    legend.onAdd = function(map) {
+        var div = L.DomUtil.create('div', 'info legend'),
+            grades = [0, 0.1, 0.5, 1, 2, 3, 4, 5],
+            labels = [];
+        for (var i = 0; i < grades.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+        }
         return div;
     };
 
     legend.addTo(mymap);
-
-    ////////////////////////////////////////////////////////////////
 
     //Create a layer control, pass in the baseMaps and overlayMaps. Add the layer control to the map
     L.control.layers(baseMaps, markLayer).addTo(mymap);
